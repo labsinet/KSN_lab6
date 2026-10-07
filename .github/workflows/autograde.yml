@@ -1,0 +1,54 @@
+name: autograde
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autograde-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Перевірка цілісності тестів
+        run: sha256sum --check --quiet integrity.sha256
+
+      - name: Встановлення залежностей
+        run: pip install -r requirements.txt
+
+      - name: Запуск автотестів
+        id: tests
+        continue-on-error: true
+        run: python -m pytest
+
+      - name: Звіт про оцінку
+        if: always()
+        run: python .github/scripts/summary.py
+
+      - name: Зберегти grade.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grade
+          path: grade.json
+          if-no-files-found: ignore
+
+      - name: Підсумок
+        if: steps.tests.outcome == 'failure'
+        run: |
+          echo "Не всі перевірки пройдено. Деталі — у Summary цього запуску."
+          exit 1

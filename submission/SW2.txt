@@ -1,0 +1,2 @@
+# Вставте сюди вивід команди  show startup-config  (після copy running-config startup-config)
+# Пристрій: SW2
